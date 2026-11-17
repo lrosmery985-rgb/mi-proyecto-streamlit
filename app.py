@@ -26,7 +26,7 @@ div[data-testid="stTextInput"] input, div[data-testid="stSelectbox"] div { backg
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="header"><h1 style="margin:0; font-size:42px;">🧁 Delicia Reposteria Rosmery ✨</h1><div style="background:#fff2a8; display:inline-block; padding:4px 14px; border-radius:12px; border:2px solid #5c1a2e; font-weight:bold;">PANADERIA KAWAI 💖</div></div>', unsafe_allow_html=True)
+st.markdown('<div class="header"><h1 style="margin:0; font-size:42px;">🧁 Delicia Reposteria Rosmery ✨</h1></div>', unsafe_allow_html=True)
 st.write("")
 
 if "inventario_v2" not in st.session_state:
@@ -70,4 +70,3 @@ if st.button("💾 Guardar Cambios ✨", use_container_width=True):
 
 st.write("")
 st.markdown('<div class="banner">✨ ¡Todo listo para hornear hoy! ✨<br><span style="font-size:15px;">Prepara tu horno • Ventas activas • Nuevas recetas disponibles</span></div>', unsafe_allow_html=True)
-st.write("💡 Tip: Edita tu tabla y dale a Guardar. ¡Tu profe va a ver todo rosado y ordenado!")
