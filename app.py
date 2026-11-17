@@ -29,15 +29,17 @@ div[data-testid="stTextInput"] input, div[data-testid="stSelectbox"] div { backg
 st.markdown('<div class="header"><h1 style="margin:0; font-size:42px;">🧁 Delicia Reposteria Rosmery ✨</h1><div style="background:#fff2a8; display:inline-block; padding:4px 14px; border-radius:12px; border:2px solid #5c1a2e; font-weight:bold;">PANADERIA KAWAI 💖</div></div>', unsafe_allow_html=True)
 st.write("")
 
-if "inventario" not in st.session_state:
-    st.session_state.inventario = pd.DataFrame({
+if "inventario_v2" not in st.session_state:
+    st.session_state.inventario_v2 = pd.DataFrame({
         "Producto": ["Croissant", "Donut Rosa", "Cupcake Vainilla"],
         "Precio": [4500, 3800, 5000],
         "Stock": [24, 12, 30],
         "Estado": ["En Stock", "Bajo", "En Stock"]
     })
 
-df = st.session_state.inventario
+df = st.session_state.inventario_v2
+df["Stock"] = pd.to_numeric(df["Stock"], errors="coerce").fillna(0)
+df["Precio"] = pd.to_numeric(df["Precio"], errors="coerce").fillna(0)
 total_stock = int(df["Stock"].sum())
 bajo = int((df["Estado"] == "Bajo").sum())
 
@@ -54,7 +56,7 @@ with col_f: filtro = st.selectbox("Filtrar por Estado", ["Todos", "En Stock", "B
 
 df_f = df.copy()
 if buscar:
-    df_f = df_f[df_f["Producto"].str.contains(buscar, case=False, na=False)]
+    df_f = df_f[df_f["Producto"].astype(str).str.contains(buscar, case=False, na=False)]
 if filtro != "Todos":
     df_f = df_f[df_f["Estado"] == filtro]
 
@@ -62,7 +64,7 @@ st.markdown("### 📋 Tu Inventario Actual")
 editado = st.data_editor(df_f, use_container_width=True, hide_index=True, num_rows="dynamic", key="tabla")
 
 if st.button("💾 Guardar Cambios ✨", use_container_width=True):
-    st.session_state.inventario = editado
+    st.session_state.inventario_v2 = editado
     st.balloons()
     st.success("¡Guardado Rosmery!")
 
