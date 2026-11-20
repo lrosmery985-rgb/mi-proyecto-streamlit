@@ -27,14 +27,14 @@ def poner_estado(stock):
     else:
         return "En Stock"
 
-if "inventario_v4" not in st.session_state:
-    st.session_state.inventario_v4 = pd.DataFrame({
+if "inventario_v5" not in st.session_state:
+    st.session_state.inventario_v5 = pd.DataFrame({
         "Producto": ["Croissant", "Donut Rosa", "Cupcake Vainilla"],
         "Precio": [4500, 3800, 5000],
         "Stock": [24, 12, 30],
     })
 
-df_base = st.session_state.inventario_v4.copy()
+df_base = st.session_state.inventario_v5.copy()
 df_base["Stock"] = pd.to_numeric(df_base["Stock"], errors="coerce").fillna(0).astype(int)
 df_base["Precio"] = pd.to_numeric(df_base["Precio"], errors="coerce").fillna(0).astype(int)
 df = df_base.copy()
@@ -49,28 +49,33 @@ with c2: st.markdown(f'<div class="card">⚠️ Productos con Stock Bajo<div cla
 with c3: st.markdown(f'<div class="card">🧁 Total de Productos<div class="num">{len(df)}</div><div>Delicias rosadas</div></div>', unsafe_allow_html=True)
 
 st.write("")
-# --- AGREGAR ---
-st.markdown("### ➕ Agregar Nuevo Producto 💖")
-with st.form("agregar", clear_on_submit=True):
-    col1, col2, col3 = st.columns(3)
-    with col1: nuevo_prod = st.text_input("Producto")
-    with col2: nuevo_precio = st.number_input("Precio", min_value=0, step=100)
-    with col3: nuevo_stock = st.number_input("Stock", min_value=0, step=1)
-    if st.form_submit_button("💖 Agregar Producto ✨", use_container_width=True):
-        if nuevo_prod.strip() == "":
-            st.warning("Escribe el nombre del producto")
-        else:
-            nuevo = pd.DataFrame([{"Producto": nuevo_prod, "Precio": nuevo_precio, "Stock": nuevo_stock}])
-            st.session_state.inventario_v4 = pd.concat([st.session_state.inventario_v4, nuevo], ignore_index=True)
-            st.success(f"¡{nuevo_prod} agregado! Estado: {poner_estado(nuevo_stock)}")
-            st.rerun()
+# --- PESTAÑAS ---
+tab1, tab2, tab3 = st.tabs(["➕ Agregar Nuevo", "✏️ Editar", "🗑️ Eliminar"])
 
-st.write("")
-# --- EDITAR Y ELIMINAR ---
-st.markdown("### ✏️ Editar / 🗑️ Eliminar Producto")
-if len(df) > 0:
-    col_e, col_d = st.columns(2)
-    with col_e:
+# 1. AGREGAR NUEVO - SOLO PARA PRODUCTOS NUEVOS
+with tab1:
+    st.markdown("### ➕ Agregar Producto Nuevo 💖")
+    st.caption("Aquí solo se agregan productos nuevos, no se editan los viejos.")
+    with st.form("agregar", clear_on_submit=True):
+        col1, col2, col3 = st.columns(3)
+        with col1: nuevo_prod = st.text_input("Nombre del producto nuevo")
+        with col2: nuevo_precio = st.number_input("Precio", min_value=0, step=100)
+        with col3: nuevo_stock = st.number_input("Stock", min_value=0, step=1)
+        if st.form_submit_button("💖 Agregar Producto Nuevo ✨", use_container_width=True):
+            if nuevo_prod.strip() == "":
+                st.warning("Escribe el nombre del producto")
+            elif nuevo_prod in df["Producto"].tolist():
+                st.warning("Ese producto ya existe, mejor edítalo en la pestaña Editar")
+            else:
+                nuevo = pd.DataFrame([{"Producto": nuevo_prod, "Precio": nuevo_precio, "Stock": nuevo_stock}])
+                st.session_state.inventario_v5 = pd.concat([st.session_state.inventario_v5, nuevo], ignore_index=True)
+                st.success(f"¡{nuevo_prod} agregado! Estado automático: {poner_estado(nuevo_stock)} 💖")
+                st.rerun()
+
+# 2. EDITAR
+with tab2:
+    st.markdown("### ✏️ Editar Producto")
+    if len(df) > 0:
         prod_editar = st.selectbox("Elige producto para editar", df["Producto"].tolist(), key="sel_editar")
         fila = df[df["Producto"] == prod_editar].iloc[0]
         with st.form("editar"):
@@ -80,20 +85,26 @@ if len(df) > 0:
             st.caption(f"Estado automático será: {poner_estado(edit_stock)}")
             if st.form_submit_button("💾 Guardar Cambios ✨", use_container_width=True):
                 idx = df_base[df_base["Producto"] == prod_editar].index[0]
-                st.session_state.inventario_v4.loc[idx, "Producto"] = edit_nombre
-                st.session_state.inventario_v4.loc[idx, "Precio"] = edit_precio
-                st.session_state.inventario_v4.loc[idx, "Stock"] = edit_stock
+                st.session_state.inventario_v5.loc[idx, "Producto"] = edit_nombre
+                st.session_state.inventario_v5.loc[idx, "Precio"] = edit_precio
+                st.session_state.inventario_v5.loc[idx, "Stock"] = edit_stock
                 st.success("¡Editado! El Estado se actualizó solo 💖")
                 st.rerun()
-    with col_d:
+    else:
+        st.info("No hay productos todavía.")
+
+# 3. ELIMINAR
+with tab3:
+    st.markdown("### 🗑️ Eliminar Producto")
+    if len(df) > 0:
         prod_eliminar = st.selectbox("Elige producto para eliminar", df["Producto"].tolist(), key="sel_eliminar")
         st.write(f"Vas a eliminar: **{prod_eliminar}**")
         if st.button("🗑️ Eliminar Producto", use_container_width=True):
-            st.session_state.inventario_v4 = st.session_state.inventario_v4[st.session_state.inventario_v4["Producto"] != prod_eliminar].reset_index(drop=True)
+            st.session_state.inventario_v5 = st.session_state.inventario_v5[st.session_state.inventario_v5["Producto"] != prod_eliminar].reset_index(drop=True)
             st.success(f"¡{prod_eliminar} eliminado!")
             st.rerun()
-else:
-    st.info("No hay productos todavía. Agrega uno arriba.")
+    else:
+        st.info("No hay productos para eliminar.")
 
 st.write("")
 st.markdown("### 🔍 Buscar y Filtrar 💖")
