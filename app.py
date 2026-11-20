@@ -27,14 +27,14 @@ def poner_estado(stock):
     else:
         return "En Stock"
 
-if "inventario_v5" not in st.session_state:
-    st.session_state.inventario_v5 = pd.DataFrame({
+if "inventario_v6" not in st.session_state:
+    st.session_state.inventario_v6 = pd.DataFrame({
         "Producto": ["Croissant", "Donut Rosa", "Cupcake Vainilla"],
         "Precio": [4500, 3800, 5000],
         "Stock": [24, 12, 30],
     })
 
-df_base = st.session_state.inventario_v5.copy()
+df_base = st.session_state.inventario_v6.copy()
 df_base["Stock"] = pd.to_numeric(df_base["Stock"], errors="coerce").fillna(0).astype(int)
 df_base["Precio"] = pd.to_numeric(df_base["Precio"], errors="coerce").fillna(0).astype(int)
 df = df_base.copy()
@@ -49,47 +49,50 @@ with c2: st.markdown(f'<div class="card">⚠️ Productos con Stock Bajo<div cla
 with c3: st.markdown(f'<div class="card">🧁 Total de Productos<div class="num">{len(df)}</div><div>Delicias rosadas</div></div>', unsafe_allow_html=True)
 
 st.write("")
-# --- PESTAÑAS ---
-tab1, tab2, tab3 = st.tabs(["➕ Agregar Nuevo", "✏️ Editar", "🗑️ Eliminar"])
+tab1, tab2, tab3 = st.tabs(["➕ Agregar Producto", "📦 Actualizar Stock", "🗑️ Eliminar Producto"])
 
-# 1. AGREGAR NUEVO - SOLO PARA PRODUCTOS NUEVOS
+# 1. AGREGAR
 with tab1:
     st.markdown("### ➕ Agregar Producto Nuevo 💖")
-    st.caption("Aquí solo se agregan productos nuevos, no se editan los viejos.")
     with st.form("agregar", clear_on_submit=True):
         col1, col2, col3 = st.columns(3)
         with col1: nuevo_prod = st.text_input("Nombre del producto nuevo")
         with col2: nuevo_precio = st.number_input("Precio", min_value=0, step=100)
-        with col3: nuevo_stock = st.number_input("Stock", min_value=0, step=1)
-        if st.form_submit_button("💖 Agregar Producto Nuevo ✨", use_container_width=True):
+        with col3: nuevo_stock = st.number_input("Stock inicial", min_value=0, step=1)
+        if st.form_submit_button("💖 Agregar Producto ✨", use_container_width=True):
             if nuevo_prod.strip() == "":
                 st.warning("Escribe el nombre del producto")
             elif nuevo_prod in df["Producto"].tolist():
-                st.warning("Ese producto ya existe, mejor edítalo en la pestaña Editar")
+                st.warning("Ese producto ya existe, usa Actualizar Stock")
             else:
                 nuevo = pd.DataFrame([{"Producto": nuevo_prod, "Precio": nuevo_precio, "Stock": nuevo_stock}])
-                st.session_state.inventario_v5 = pd.concat([st.session_state.inventario_v5, nuevo], ignore_index=True)
+                st.session_state.inventario_v6 = pd.concat([st.session_state.inventario_v6, nuevo], ignore_index=True)
                 st.success(f"¡{nuevo_prod} agregado! Estado automático: {poner_estado(nuevo_stock)} 💖")
                 st.rerun()
 
-# 2. EDITAR
+# 2. ACTUALIZAR STOCK AUTOMATICO
 with tab2:
-    st.markdown("### ✏️ Editar Producto")
+    st.markdown("### 📦 Actualizar Stock")
+    st.caption("Aquí sumas o restas stock y el Estado se actualiza solo.")
     if len(df) > 0:
-        prod_editar = st.selectbox("Elige producto para editar", df["Producto"].tolist(), key="sel_editar")
-        fila = df[df["Producto"] == prod_editar].iloc[0]
-        with st.form("editar"):
-            edit_nombre = st.text_input("Nombre", value=str(fila["Producto"]))
-            edit_precio = st.number_input("Precio", min_value=0, step=100, value=int(fila["Precio"]))
-            edit_stock = st.number_input("Stock", min_value=0, step=1, value=int(fila["Stock"]))
-            st.caption(f"Estado automático será: {poner_estado(edit_stock)}")
-            if st.form_submit_button("💾 Guardar Cambios ✨", use_container_width=True):
-                idx = df_base[df_base["Producto"] == prod_editar].index[0]
-                st.session_state.inventario_v5.loc[idx, "Producto"] = edit_nombre
-                st.session_state.inventario_v5.loc[idx, "Precio"] = edit_precio
-                st.session_state.inventario_v5.loc[idx, "Stock"] = edit_stock
-                st.success("¡Editado! El Estado se actualizó solo 💖")
-                st.rerun()
+        prod_stock = st.selectbox("Elige el producto", df["Producto"].tolist(), key="sel_stock")
+        fila = df[df["Producto"] == prod_stock].iloc[0]
+        st.info(f"Stock actual de **{prod_stock}**: {int(fila['Stock'])}  |  Estado actual: {fila['Estado']}")
+        col_a, col_b = st.columns(2)
+        with col_a: tipo = st.radio("¿Qué quieres hacer?", ["➕ Entrada - Sumar stock", "➖ Salida - Restar stock (venta)"], horizontal=True)
+        with col_b: cantidad = st.number_input("¿Cuántos?", min_value=1, step=1, value=1)
+        if tipo.startswith("➕"):
+            nuevo_stock_calc = int(fila["Stock"]) + cantidad
+        else:
+            nuevo_stock_calc = int(fila["Stock"]) - cantidad
+            if nuevo_stock_calc < 0:
+                nuevo_stock_calc = 0
+        st.caption(f"Nuevo stock quedará en: **{nuevo_stock_calc}**  |  Nuevo Estado será: **{poner_estado(nuevo_stock_calc)}**")
+        if st.button("💾 Actualizar Stock ✨", use_container_width=True):
+            idx = df_base[df_base["Producto"] == prod_stock].index[0]
+            st.session_state.inventario_v6.loc[idx, "Stock"] = nuevo_stock_calc
+            st.success(f"¡Listo! {prod_stock} ahora tiene {nuevo_stock_calc} y Estado: {poner_estado(nuevo_stock_calc)}")
+            st.rerun()
     else:
         st.info("No hay productos todavía.")
 
@@ -100,7 +103,7 @@ with tab3:
         prod_eliminar = st.selectbox("Elige producto para eliminar", df["Producto"].tolist(), key="sel_eliminar")
         st.write(f"Vas a eliminar: **{prod_eliminar}**")
         if st.button("🗑️ Eliminar Producto", use_container_width=True):
-            st.session_state.inventario_v5 = st.session_state.inventario_v5[st.session_state.inventario_v5["Producto"] != prod_eliminar].reset_index(drop=True)
+            st.session_state.inventario_v6 = st.session_state.inventario_v6[st.session_state.inventario_v6["Producto"] != prod_eliminar].reset_index(drop=True)
             st.success(f"¡{prod_eliminar} eliminado!")
             st.rerun()
     else:
