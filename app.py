@@ -29,17 +29,28 @@ div[data-testid="stTextInput"] input, div[data-testid="stSelectbox"] div { backg
 st.markdown('<div class="header"><h1 style="margin:0; font-size:42px;">🧁 Delicia Reposteria Rosmery ✨</h1></div>', unsafe_allow_html=True)
 st.write("")
 
+# FUNCION PARA ESTADO AUTOMATICO
+def poner_estado(stock):
+    if stock == 0:
+        return "Agotado"
+    elif stock < 15:
+        return "Bajo"
+    else:
+        return "En Stock"
+
 if "inventario_v2" not in st.session_state:
     st.session_state.inventario_v2 = pd.DataFrame({
         "Producto": ["Croissant", "Donut Rosa", "Cupcake Vainilla"],
         "Precio": [4500, 3800, 5000],
         "Stock": [24, 12, 30],
-        "Estado": ["En Stock", "Bajo", "En Stock"]
     })
 
 df = st.session_state.inventario_v2
 df["Stock"] = pd.to_numeric(df["Stock"], errors="coerce").fillna(0)
 df["Precio"] = pd.to_numeric(df["Precio"], errors="coerce").fillna(0)
+# AQUI SE APLICA AUTOMATICO
+df["Estado"] = df["Stock"].apply(poner_estado)
+
 total_stock = int(df["Stock"].sum())
 bajo = int((df["Estado"] == "Bajo").sum())
 
@@ -52,7 +63,7 @@ st.write("")
 st.markdown("### 🔍 Buscar y Filtrar 💖")
 col_b, col_f = st.columns(2)
 with col_b: buscar = st.text_input("Buscar producto por nombre", placeholder="Ej: Croissant...")
-with col_f: filtro = st.selectbox("Filtrar por Estado", ["Todos", "En Stock", "Bajo"])
+with col_f: filtro = st.selectbox("Filtrar por Estado", ["Todos", "En Stock", "Bajo", "Agotado"])
 
 df_f = df.copy()
 if buscar:
@@ -61,9 +72,12 @@ if filtro != "Todos":
     df_f = df_f[df_f["Estado"] == filtro]
 
 st.markdown("### 📋 Tu Inventario Actual")
-editado = st.data_editor(df_f, use_container_width=True, hide_index=True, num_rows="dynamic", key="tabla")
+st.info("💖 Solo edita Producto, Precio y Stock. El Estado se pone solo.")
+editado = st.data_editor(df_f, use_container_width=True, hide_index=True, num_rows="dynamic", key="tabla", disabled=["Estado"])
 
 if st.button("💾 Guardar Cambios ✨", use_container_width=True):
+    editado["Stock"] = pd.to_numeric(editado["Stock"], errors="coerce").fillna(0)
+    editado["Estado"] = editado["Stock"].apply(poner_estado)
     st.session_state.inventario_v2 = editado
     st.balloons()
     st.success("¡Guardado Rosmery!")
